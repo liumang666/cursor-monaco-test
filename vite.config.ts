@@ -18,7 +18,22 @@ export default defineConfig({
     (monacoEditorPlugin as any).default({
       // 可选配置：指定需要支持的语言工作器（Worker），按需加载以减少打包体积
       languageWorkers: ['editorWorkerService'],
-      // 其他插件选项...
+      // 这里只保留项目中实际使用到的语言，避免打包过大
+      languages: [
+        'typescript',
+        'javascript',
+        'python',
+        'java',
+        'css',
+        'html',
+        'sql',
+        'json',
+        'markdown',
+        'xml',
+        'yaml',
+      ],
+      // 如果你不需要全部编辑器功能，可进一步缩减（例如不需要格式化、提示等）
+      // features: ['coreCommands', 'find', 'bracketMatching', 'suggest'],
     }),
     viteCompression({
       // 压缩代码
@@ -52,6 +67,7 @@ export default defineConfig({
     }),
   ],
   build: {
+    chunkSizeWarningLimit: 2000,
     rollupOptions: {
       output: {
         manualChunks: {

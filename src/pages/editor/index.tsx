@@ -14,11 +14,10 @@ const themes: OptionItem[] = [
   { label: 'High Contrast Dark', value: 'hc-black' },
 ]
 
-const sampleLoaderMap = import.meta.glob('../../assets/home-samples/sample.*.txt', {
-  query: '?raw',
-  import: 'default',
-})
-
+// const sampleLoaderMap = import.meta.glob('../../assets/home-samples/sample.*.txt', {
+//   query: '?raw',
+//   import: 'default',
+// })
 const EditorPage = () => {
   const [language, setLanguage] = useState<string>('typescript')
   const [theme, setTheme] = useState<string>('vs')
@@ -26,13 +25,19 @@ const EditorPage = () => {
   const [languageReady, setLanguageReady] = useState(false)
 
   const loadSampleText = async (languageId: string): Promise<string> => {
-    const samplePath = `../../assets/home-samples/sample.${languageId}.txt`
-    const loader = sampleLoaderMap[samplePath]
-    if (!loader) {
+    try {
+      const response = await fetch(`/src/assets/home-samples/sample.${languageId}.txt`)
+      if (!response.ok) {
+        console.warn(`Failed to load sample for ${languageId}: ${response.status}`)
+        return ''
+      }
+      const text = await response.text()
+      console.log(`Loaded sample for ${languageId}:`, text.substring(0, 100) + '...')
+      return text
+    } catch (error) {
+      console.warn('加载示例文本失败：', error)
       return ''
     }
-    const result = await loader()
-    return typeof result === 'string' ? result : ''
   }
 
   useEffect(() => {
