@@ -31,12 +31,19 @@ export default defineConfig({
       // filter: /\.(js|css|html)$/i, // 指定需要压缩的文件类型
       // compressionOptions: {}, // 压缩算法的参数
     }),
+    /**
+     * 同时生成两种格式后，服务器可以根据客户端请求头中的 Accept-Encoding 字段动态选择最优格式：
+     * 如果浏览器支持 brotli，就返回 .br 文件（体积更小）
+     * 如果不支持，则返回 .gz 文件。
+     * 如果都不支持，则返回原始未压缩文件（deleteOriginFile: false 保留了源文件）。
+     */
     viteCompression({
       algorithm: 'brotliCompress',
       ext: '.br',
       threshold: 10240,
       deleteOriginFile: false,
     }),
+    // 是 Google 推出的较新压缩算法，压缩率通常比 gzip 更高（文件体积更小），能进一步提升页面加载速度。但部分旧版浏览器（如 IE 11、旧版 Safari）不支持 brotli
     visualizer({
       gzipSize: true, // 显示各文件在经过 gzip 压缩后的大小
       brotliSize: true, // 显示各文件在经过 brotli 压缩后的
