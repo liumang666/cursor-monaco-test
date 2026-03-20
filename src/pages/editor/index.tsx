@@ -23,21 +23,39 @@ const EditorPage = () => {
   const [language, setLanguage] = useState<string>('typescript')
   const [theme, setTheme] = useState<string>('vs')
   const [value, setValue] = useState('')
+  const [languageReady, setLanguageReady] = useState(false)
 
-  const load = async (languageId: string) => {
+  const loadSampleText = async (languageId: string): Promise<string> => {
     const samplePath = `../../assets/home-samples/sample.${languageId}.txt`
     const loader = sampleLoaderMap[samplePath]
     if (!loader) {
-      setValue('')
-      return
+      return ''
     }
     const result = await loader()
-    console.log(result)
-    setValue(typeof result === 'string' ? result : '')
+    return typeof result === 'string' ? result : ''
   }
+
   useEffect(() => {
-    void ensureMonacoLanguage(language)
-    load(language)
+    let canceled = false
+    const initLanguage = async () => {
+      setValue('')
+      setLanguageReady(false)
+
+      await ensureMonacoLanguage(language)
+      if (canceled) return
+
+      const sampleText = await loadSampleText(language)
+      if (canceled) return
+      console.log(sampleText)
+      setValue(sampleText)
+      setLanguageReady(true)
+    }
+
+    void initLanguage()
+
+    return () => {
+      canceled = true
+    }
   }, [language])
 
   const handleLanguageChange = async (languageId: string) => {
@@ -86,15 +104,29 @@ const EditorPage = () => {
           overflow: 'hidden',
         }}
       >
-        <MonacoEditor
-          language={language}
-          value={value}
-          theme={theme}
-          onDidValueChange={setValue}
-          options={{
-            minimap: { enabled: false },
-          }}
-        />
+        {languageReady ? (
+          <MonacoEditor
+            language={language}
+            value={value}
+            theme={theme}
+            onDidValueChange={setValue}
+            options={{
+              minimap: { enabled: false },
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#999',
+            }}
+          >
+            语言包载入中，稍候...
+          </div>
+        )}
       </div>
     </div>
   )

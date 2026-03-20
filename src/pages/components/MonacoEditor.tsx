@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { editor, type IDisposable } from 'monaco-editor/esm/vs/editor/editor.api'
 import CreateEditor from './CreateEditor'
 
@@ -20,6 +20,8 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
   const lastSubscriptionRef = useRef<IDisposable | null>(null)
 
   const modelRef = useRef<editor.ITextModel | null>(null)
+  const [modelReady, setModelReady] = useState(false)
+
   // 用于只在挂载时创建 model，避免语言/内容变化时触发 cleanup 过早 dispose
   const initialLanguageRef = useRef(language)
   const initialValueRef = useRef(value)
@@ -27,6 +29,7 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
   useEffect(() => {
     if (!modelRef.current) {
       modelRef.current = editor.createModel(initialValueRef.current, initialLanguageRef.current)
+      setModelReady(true)
     }
 
     return () => {
@@ -43,10 +46,8 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
       modelRef.current.setValue(value)
     }
 
-    const currentLanguage = modelRef.current.getLanguageId()
-    if (currentLanguage !== language) {
-      editor.setModelLanguage(modelRef.current, language)
-    }
+    // 语言包可能是异步加载的：即便当前语言相同，重复设置可触发重计算 tokenization，修复首屏高亮不渲染问题。
+    editor.setModelLanguage(modelRef.current, language)
   }, [language, value])
 
   useEffect(() => {
@@ -68,7 +69,7 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
     }
   }, [onDidValueChange])
 
-  if (!modelRef.current) {
+  if (!modelRef.current || !modelReady) {
     return null
   }
 
