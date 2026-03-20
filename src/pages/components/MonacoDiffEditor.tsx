@@ -1,50 +1,79 @@
 import { useRef, useEffect } from 'react'
-import { editor } from 'monaco-editor'
+import { editor } from 'monaco-editor/esm/vs/editor/editor.api'
 import CreateDiffEditor from './CreateDiffEditor'
 
-export interface HomeType {
+export interface MonacoDiffEditorProps {
   language?: string
   originalValue: string
   modifiedValue: string
 }
 
-const MonacoEditor: React.FC<HomeType> = ({ language = 'plaintext', originalValue = '', modifiedValue = '' }) => {
-  const originalModel = useRef<editor.ITextModel>(null)
-  if (!originalModel.current) {
-    originalModel.current = editor.createModel(originalValue, language)
-  }
-  const modifiedModel = useRef<editor.ITextModel>(null)
-  if (!modifiedModel.current) {
-    modifiedModel.current = editor.createModel(modifiedValue, language)
-  }
+const MonacoDiffEditor: React.FC<MonacoDiffEditorProps> = ({
+  language = 'plaintext',
+  originalValue = '',
+  modifiedValue = '',
+}) => {
+  const initialDataRef = useRef({
+    language,
+    originalValue,
+    modifiedValue,
+  })
+  const originalModelRef = useRef<editor.ITextModel | null>(null)
+  const modifiedModelRef = useRef<editor.ITextModel | null>(null)
 
   useEffect(() => {
-    // 更新模型值
-    if (originalModel.current!.getValue() !== originalValue) {
-      originalModel.current!.setValue(originalValue)
+    if (!originalModelRef.current) {
+      originalModelRef.current = editor.createModel(
+        initialDataRef.current.originalValue,
+        initialDataRef.current.language
+      )
+    }
+    if (!modifiedModelRef.current) {
+      modifiedModelRef.current = editor.createModel(
+        initialDataRef.current.modifiedValue,
+        initialDataRef.current.language
+      )
     }
 
-    if (modifiedModel.current!.getValue() !== modifiedValue) {
-      modifiedModel.current!.setValue(modifiedValue)
+    return () => {
+      originalModelRef.current?.dispose()
+      modifiedModelRef.current?.dispose()
+      originalModelRef.current = null
+      modifiedModelRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!originalModelRef.current || !modifiedModelRef.current) return
+
+    if (originalModelRef.current.getValue() !== originalValue) {
+      originalModelRef.current.setValue(originalValue)
+    }
+    if (modifiedModelRef.current.getValue() !== modifiedValue) {
+      modifiedModelRef.current.setValue(modifiedValue)
     }
 
-    // 更新语言
-    const originalLanguage = originalModel.current!.getLanguageId()
+    const originalLanguage = originalModelRef.current.getLanguageId()
     if (originalLanguage !== language) {
-      editor.setModelLanguage(originalModel.current!, language)
+      editor.setModelLanguage(originalModelRef.current, language)
     }
 
-    const modifiedLanguage = modifiedModel.current!.getLanguageId()
+    const modifiedLanguage = modifiedModelRef.current.getLanguageId()
     if (modifiedLanguage !== language) {
-      editor.setModelLanguage(modifiedModel.current!, language)
+      editor.setModelLanguage(modifiedModelRef.current, language)
     }
   }, [language, originalValue, modifiedValue])
 
+  if (!originalModelRef.current || !modifiedModelRef.current) {
+    return null
+  }
+
   return (
     <CreateDiffEditor
-      originalModel={originalModel.current}
-      modifiedModel={modifiedModel.current}
+      originalModel={originalModelRef.current}
+      modifiedModel={modifiedModelRef.current}
     ></CreateDiffEditor>
   )
 }
-export default MonacoEditor
+
+export default MonacoDiffEditor

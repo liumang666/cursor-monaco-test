@@ -1,8 +1,8 @@
 import { useRef, useEffect } from 'react'
-import { editor, type IDisposable } from 'monaco-editor'
+import { editor, type IDisposable } from 'monaco-editor/esm/vs/editor/editor.api'
 import CreateEditor from './CreateEditor'
 
-export interface HomeType {
+export interface MonacoEditorProps {
   language?: string
   value: string
   theme?: string
@@ -10,53 +10,67 @@ export interface HomeType {
   onDidValueChange?: (value: string) => void
 }
 
-const MonacoEditor: React.FC<HomeType> = ({
+const MonacoEditor: React.FC<MonacoEditorProps> = ({
   language = 'plaintext',
   value = '',
   theme = 'vs',
   onDidValueChange,
   options,
 }) => {
-  const lastSubscriptionRef = useRef<IDisposable>(null)
+  const lastSubscriptionRef = useRef<IDisposable | null>(null)
 
-  const modelRef = useRef<editor.ITextModel>(null)
-  if (!modelRef.current) {
-    modelRef.current = editor.createModel(value, language)
-  }
-
-  // const modelRef = useRef(editor.createModel(value, language))
+  const modelRef = useRef<editor.ITextModel | null>(null)
+  // 用于只在挂载时创建 model，避免语言/内容变化时触发 cleanup 过早 dispose
+  const initialLanguageRef = useRef(language)
+  const initialValueRef = useRef(value)
 
   useEffect(() => {
-    // 更新模型值
-    if (modelRef.current!.getValue() !== value) {
-      modelRef.current!.setValue(value)
+    if (!modelRef.current) {
+      modelRef.current = editor.createModel(initialValueRef.current, initialLanguageRef.current)
     }
 
-    // 更新语言
-    const currentLanguage = modelRef.current!.getLanguageId()
+    return () => {
+      lastSubscriptionRef.current?.dispose()
+      modelRef.current?.dispose()
+      modelRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!modelRef.current) return
+
+    if (modelRef.current.getValue() !== value) {
+      modelRef.current.setValue(value)
+    }
+
+    const currentLanguage = modelRef.current.getLanguageId()
     if (currentLanguage !== language) {
-      editor.setModelLanguage(modelRef.current!, language)
+      editor.setModelLanguage(modelRef.current, language)
     }
   }, [language, value])
 
-  // 处理 onDidValueChange 事件订阅
   useEffect(() => {
+    if (!modelRef.current) return
+
     if (lastSubscriptionRef.current) {
       lastSubscriptionRef.current.dispose()
       lastSubscriptionRef.current = null
     }
 
     if (onDidValueChange) {
-      lastSubscriptionRef.current = modelRef.current!.onDidChangeContent(() => {
+      lastSubscriptionRef.current = modelRef.current.onDidChangeContent(() => {
         onDidValueChange(modelRef.current!.getValue())
       })
     }
 
-    // 清理函数
     return () => {
       lastSubscriptionRef.current?.dispose()
     }
   }, [onDidValueChange])
+
+  if (!modelRef.current) {
+    return null
+  }
 
   return (
     <CreateEditor

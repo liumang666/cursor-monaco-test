@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react'
-import { editor } from 'monaco-editor'
+import { editor } from 'monaco-editor/esm/vs/editor/editor.api'
 
 const CreateEditor: React.FC<{
   model: editor.ITextModel
@@ -43,7 +43,7 @@ const CreateEditor: React.FC<{
       resizeObserverRef.current?.disconnect()
       editorInstance.dispose()
     }
-  }, [])
+  }, [model, onEditorLoaded, readOnly, theme])
 
   useEffect(() => {
     if (!editorRef.current) return

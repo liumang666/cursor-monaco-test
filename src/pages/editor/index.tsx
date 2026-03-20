@@ -1,87 +1,103 @@
-import { useState } from 'react'
-import { Select } from 'antd'
+import { useEffect, useState } from 'react'
+import { Select, Space, Typography } from 'antd'
 import MonacoEditor from '@/pages/components/MonacoEditor'
-import { languages as monacoLanguages } from 'monaco-editor'
+import { editorLanguages, ensureMonacoLanguage } from '@/pages/components/monacoLanguageLoader'
 
 interface OptionItem {
   value: string
   label: string
 }
-const themes: OptionItem[] = [
-  {
-    label: 'Visual Studio',
-    value: 'vs',
-  },
-  {
-    label: 'Visual Studio Dark',
-    value: 'vs-dark',
-  },
-  {
-    label: 'High Contrast Dark',
-    value: 'hc-black',
-  },
-]
-const languages: OptionItem[] = monacoLanguages.getLanguages().map((item) => {
-  return {
-    label: item.id,
-    value: item.id,
-  }
-})
-console.log(2345)
-export interface HomeType {
-  language: string
-  value: string
-  theme: 'vs' | 'vs-dark' | 'hc-black'
-}
 
-const Home = () => {
-  const [language, setLanguage] = useState<string | undefined>()
-  const [theme, setTheme] = useState<string | undefined>(themes[0].value)
+const themes: OptionItem[] = [
+  { label: 'Visual Studio', value: 'vs' },
+  { label: 'Visual Studio Dark', value: 'vs-dark' },
+  { label: 'High Contrast Dark', value: 'hc-black' },
+]
+
+const sampleLoaderMap = import.meta.glob('../../assets/home-samples/sample.*.txt', {
+  query: '?raw',
+  import: 'default',
+})
+
+const EditorPage = () => {
+  const [language, setLanguage] = useState<string>('typescript')
+  const [theme, setTheme] = useState<string>('vs')
   const [value, setValue] = useState('')
+
+  const load = async (languageId: string) => {
+    const samplePath = `../../assets/home-samples/sample.${languageId}.txt`
+    const loader = sampleLoaderMap[samplePath]
+    if (!loader) {
+      setValue('')
+      return
+    }
+    const result = await loader()
+    console.log(result)
+    setValue(typeof result === 'string' ? result : '')
+  }
+  useEffect(() => {
+    void ensureMonacoLanguage(language)
+    load(language)
+  }, [language])
 
   const handleLanguageChange = async (languageId: string) => {
     setLanguage(languageId)
-    const result = (await import(`@/assets/home-samples/sample.${languageId}.txt?raw`)).default
-    setValue(result)
+    // await ensureMonacoLanguage(languageId)
+    // const samplePath = `../../assets/home-samples/sample.${languageId}.txt`
+    // const loader = sampleLoaderMap[samplePath]
+    // console.log(loader, samplePath)
+    // if (!loader) {
+    //   setValue('')
+    //   return
+    // }
+    // const result = await loader()
+    // setValue(typeof result === 'string' ? result : '')
   }
 
   return (
-    <>
-      <div style={{ margin: '20px 20px 0' }}>
+    <div style={{ padding: 20 }}>
+      <Space
+        align="center"
+        size="middle"
+        style={{ marginBottom: 16 }}
+      >
+        <Typography.Text strong>主题：</Typography.Text>
         <Select
           value={theme}
           options={themes}
-          style={{ width: '200px' }}
+          style={{ width: 200 }}
           onChange={setTheme}
-        ></Select>
+        />
+        <Typography.Text strong>语言：</Typography.Text>
         <Select
           value={language}
-          options={languages}
-          style={{ width: '200px' }}
+          options={editorLanguages}
+          style={{ width: 200 }}
           onChange={handleLanguageChange}
-        ></Select>
+          placeholder="选择语言，会自动载入示例代码"
+        />
+      </Space>
 
-        <div
-          style={{
-            height: '400px',
-            border: '1px solid #eee',
-            marginTop: '20px',
+      <div
+        style={{
+          height: 500,
+          border: '1px solid #eee',
+          borderRadius: 4,
+          overflow: 'hidden',
+        }}
+      >
+        <MonacoEditor
+          language={language}
+          value={value}
+          theme={theme}
+          onDidValueChange={setValue}
+          options={{
+            minimap: { enabled: false },
           }}
-        >
-          <MonacoEditor
-            language={language}
-            value={value}
-            theme={theme}
-            onDidValueChange={(val) => setValue(val)}
-            options={{
-              minimap: {
-                enabled: false,
-              },
-            }}
-          ></MonacoEditor>
-        </div>
+        />
       </div>
-    </>
+    </div>
   )
 }
-export default Home
+
+export default EditorPage

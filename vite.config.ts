@@ -17,7 +17,7 @@ export default defineConfig({
     react(),
     (monacoEditorPlugin as any).default({
       // 可选配置：指定需要支持的语言工作器（Worker），按需加载以减少打包体积
-      languageWorkers: ['editorWorkerService', 'css', 'html', 'json', 'typescript'],
+      languageWorkers: ['editorWorkerService'],
       // 其他插件选项...
     }),
     viteCompression({
@@ -31,6 +31,12 @@ export default defineConfig({
       // filter: /\.(js|css|html)$/i, // 指定需要压缩的文件类型
       // compressionOptions: {}, // 压缩算法的参数
     }),
+    viteCompression({
+      algorithm: 'brotliCompress',
+      ext: '.br',
+      threshold: 10240,
+      deleteOriginFile: false,
+    }),
     visualizer({
       gzipSize: true, // 显示各文件在经过 gzip 压缩后的大小
       brotliSize: true, // 显示各文件在经过 brotli 压缩后的
@@ -38,9 +44,6 @@ export default defineConfig({
       filename: 'visualizer.html', // 生成的报告文件名称
     }),
   ],
-  optimizeDeps: {
-    include: ['monaco-editor'],
-  },
   build: {
     rollupOptions: {
       output: {
@@ -48,7 +51,7 @@ export default defineConfig({
           react: ['react', 'react-dom'],
           router: ['react-router'],
           antd: ['antd'],
-          monaco: ['monaco-editor'],
+          monaco: ['monaco-editor/esm/vs/editor/editor.api'],
           axios: ['axios'],
         },
       },
